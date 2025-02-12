@@ -1,7 +1,245 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadline Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        #taskForm {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .task-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .progress-circle {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .progress-circle svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .progress-circle circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .progress-circle .bg {
+            stroke: #eee;
+        }
+
+        .progress-circle .progress {
+            stroke: #4CAF50;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dasharray 0.3s;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .days-left {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .percentage {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .importance-label {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .high { background-color: #ff6b6b; }
+        .medium { background-color: #ffd93d; }
+        .low { background-color: #6cff6c; }
+
+        .task-content {
+            flex-grow: 1;
+        }
+    </style>
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+    <form id="taskForm">
+        <div class="form-group">
+            <input type="text" id="taskTitle" placeholder="Task Title" required>
+        </div>
+        <div class="form-group">
+            <textarea id="taskDescription" placeholder="Description"></textarea>
+        </div>
+        <div class="form-group">
+            <select id="taskImportance" required>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <input type="date" id="taskDeadline" required>
+        </div>
+        <button type="submit">Add Task</button>
+    </form>
+
+    <div id="tasksContainer"></div>
+
+    <script>
+        const taskForm = document.getElementById('taskForm');
+        const tasksContainer = document.getElementById('tasksContainer');
+        
+        // Load tasks when page loads
+        let tasks = loadTasks();
+        renderTasks();
+
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDescription').value;
+            const importance = document.getElementById('taskImportance').value;
+            const deadline = new Date(document.getElementById('taskDeadline').value);
+            
+            // Normalize dates to midnight
+            const creationDate = new Date();
+            creationDate.setHours(0, 0, 0, 0);
+            deadline.setHours(0, 0, 0, 0);
+            
+            const newTask = {
+                title,
+                description,
+                importance,
+                creationDate: creationDate.toISOString(),
+                deadline: deadline.toISOString()
+            };
+            
+            tasks.push(newTask);
+            saveTasks(tasks);
+            renderTasks();
+            taskForm.reset();
+        });
+
+        function calculateProgress(creationDate, deadlineDate) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const creation = new Date(creationDate);
+            creation.setHours(0, 0, 0, 0);
+            const deadline = new Date(deadlineDate);
+            deadline.setHours(0, 0, 0, 0);
+
+            const totalDays = Math.ceil((deadline - creation) / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+            
+            let percentage;
+            if (totalDays === 0) {
+                percentage = daysLeft >= 0 ? 100 : 0;
+            } else {
+                percentage = (Math.max(daysLeft, 0) / totalDays) * 100;
+            }
+            
+            return {
+                daysLeft: Math.max(daysLeft, 0),
+                percentage: Math.min(100, Math.max(0, percentage))
+            };
+        }
+
+        function renderTasks() {
+            tasksContainer.innerHTML = '';
+            const circumference = 2 * Math.PI * 45; // r = 45
+            
+            tasks.forEach((task, index) => {
+                const progress = calculateProgress(task.creationDate, task.deadline);
+                
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                taskCard.innerHTML = `
+                    <div class="progress-circle">
+                        <svg>
+                            <circle class="bg" cx="50" cy="50" r="45"/>
+                            <circle class="progress" cx="50" cy="50" r="45"/>
+                        </svg>
+                        <div class="progress-text">
+                            <span class="days-left">${progress.daysLeft}</span>
+                            <span class="percentage">${Math.round(progress.percentage)}%</span>
+                        </div>
+                    </div>
+                    <div class="task-content">
+                        <h3>${task.title}</h3>
+                        <p>${task.description}</p>
+                        <span class="importance-label ${task.importance}">${task.importance}</span>
+                    </div>
+                `;
+                
+                const progressCircle = taskCard.querySelector('.progress');
+                const dashLength = (circumference * progress.percentage) / 100;
+                progressCircle.style.strokeDasharray = `${dashLength} ${circumference}`;
+                
+                tasksContainer.appendChild(taskCard);
+            });
+        }
+
+        function saveTasks(tasks) {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const tasksJSON = localStorage.getItem('tasks');
+            return tasksJSON ? JSON.parse(tasksJSON) : [];
+        }
+    </script>
 </body>
 </html>
