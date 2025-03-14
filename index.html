@@ -1,245 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deadline Manager</title>
+    <title>16-Way Expansion Swarm</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f0f0f0;
+        body { font-family: 'Comic Sans MS', cursive; padding: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .expansion-cell { 
+            border: 1px solid #69f0ae;
+            padding: 5px;
+            margin: 2px;
+            border-radius: 3px;
+            background: #000;
+            color: #0f0;
+            font-size: 0.8em;
         }
-
-        #taskForm {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        .cyber-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            background: #111;
+            padding: 5px;
+            border: 2px solid #ff00ff;
         }
-
-        .form-group {
-            margin-bottom: 15px;
+        #results {
+            background: #222;
+            color: #0ff;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #00ff00;
         }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        input {
+            background: #333;
+            color: #0f0;
+            border: 1px solid #00ffff;
         }
-
         button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .task-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .progress-circle {
-            position: relative;
-            width: 100px;
-            height: 100px;
-        }
-
-        .progress-circle svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .progress-circle circle {
-            fill: none;
-            stroke-width: 8;
-            stroke-linecap: round;
-        }
-
-        .progress-circle .bg {
-            stroke: #eee;
-        }
-
-        .progress-circle .progress {
-            stroke: #4CAF50;
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-            transition: stroke-dasharray 0.3s;
-        }
-
-        .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-
-        .days-left {
-            font-size: 24px;
-            font-weight: bold;
-            display: block;
-        }
-
-        .percentage {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .importance-label {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-
-        .high { background-color: #ff6b6b; }
-        .medium { background-color: #ffd93d; }
-        .low { background-color: #6cff6c; }
-
-        .task-content {
-            flex-grow: 1;
+            background: #f0f;
+            color: black;
+            border: 2px solid #0ff;
+            padding: 5px 10px;
+            margin: 5px 0;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 </head>
 <body>
-    <form id="taskForm">
-        <div class="form-group">
-            <input type="text" id="taskTitle" placeholder="Task Title" required>
-        </div>
-        <div class="form-group">
-            <textarea id="taskDescription" placeholder="Description"></textarea>
-        </div>
-        <div class="form-group">
-            <select id="taskImportance" required>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <input type="date" id="taskDeadline" required>
-        </div>
-        <button type="submit">Add Task</button>
-    </form>
-
-    <div id="tasksContainer"></div>
-
-    <script>
-        const taskForm = document.getElementById('taskForm');
-        const tasksContainer = document.getElementById('tasksContainer');
+    <div class="container">
+        <h1 style="color: #f0f">💥 16-WAY KEY SWARMER 💥</h1>
         
-        // Load tasks when page loads
-        let tasks = loadTasks();
-        renderTasks();
+        <div>
+            <label style="color: #0ff">CIPHERBLOB (hex): </label>
+            <input type="text" id="ciphertext" size="45" value="deadbeefcafebabe">
+        </div>
+        
+        <div>
+            <label style="color: #0ff">KNOWN WORDZ: </label>
+            <input type="text" id="knownText" value="sodium">
+        </div>
+        
+        <button onclick="activateSwarm()">ENGAGE QUANTUM SWARM</button>
+        
+        <h3 style="color: #f0f">SWARM GRID:</h3>
+        <div class="cyber-grid" id="expansions"></div>
+        
+        <h3 style="color: #0ff">DECRYPT STREAM:</h3>
+        <div id="results"></div>
+    </div>
 
-        taskForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const title = document.getElementById('taskTitle').value;
-            const description = document.getElementById('taskDescription').value;
-            const importance = document.getElementById('taskImportance').value;
-            const deadline = new Date(document.getElementById('taskDeadline').value);
-            
-            // Normalize dates to midnight
-            const creationDate = new Date();
-            creationDate.setHours(0, 0, 0, 0);
-            deadline.setHours(0, 0, 0, 0);
-            
-            const newTask = {
-                title,
-                description,
-                importance,
-                creationDate: creationDate.toISOString(),
-                deadline: deadline.toISOString()
-            };
-            
-            tasks.push(newTask);
-            saveTasks(tasks);
-            renderTasks();
-            taskForm.reset();
-        });
+<script>
+// ... keep previous styles ...
 
-        function calculateProgress(creationDate, deadlineDate) {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const creation = new Date(creationDate);
-            creation.setHours(0, 0, 0, 0);
-            const deadline = new Date(deadlineDate);
-            deadline.setHours(0, 0, 0, 0);
+const MAX_KEYS = 65536;
+const SWARM_SIZE = 16;
+const KEY_STEP = 4096;
 
-            const totalDays = Math.ceil((deadline - creation) / (1000 * 60 * 60 * 24));
-            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-            
-            let percentage;
-            if (totalDays === 0) {
-                percentage = daysLeft >= 0 ? 100 : 0;
-            } else {
-                percentage = (Math.max(daysLeft, 0) / totalDays) * 100;
-            }
-            
-            return {
-                daysLeft: Math.max(daysLeft, 0),
-                percentage: Math.min(100, Math.max(0, percentage))
-            };
+let activeWorkers = [];
+let foundFlag = false;
+
+// Actual working mock decryption
+function quantumDecrypt(key, cipherblob) {
+    // Convert key to 2-byte pattern
+    const keyBytes = new Uint8Array([
+        (key >> 8) & 0xFF,
+        key & 0xFF
+    ]);
+    
+    // Simple XOR CBC-like decryption
+    let decrypted = new Uint8Array(cipherblob.length);
+    let previousBlock = new Uint8Array(16).fill(0); // Fake IV
+    
+    for (let i = 0; i < cipherblob.length; i++) {
+        decrypted[i] = cipherblob[i] ^ keyBytes[i % 2];
+        // Fake CBC by XORing with previous byte
+        if (i > 0) decrypted[i] ^= decrypted[i-1];
+    }
+    
+    return decrypted;
+}
+
+function hexToCyberBytes(hex) {
+    try {
+        hex = hex.replace(/[^0-9a-f]/gi, '');
+        if (hex.length % 2 !== 0) hex = hex.slice(0, -1);
+        return new Uint8Array(hex.match(/../g).map(h => parseInt(h, 16)));
+    } catch {
+        return new Uint8Array();
+    }
+}
+
+function cyberMatch(plaintext, known) {
+    try {
+        return new Fuse([plaintext], {
+            threshold: 0.45,
+            ignoreLocation: true,
+            minMatchCharLength: 3
+        }).search(known).length > 0;
+    } catch {
+        return false;
+    }
+}
+
+async function swarmDrone(baseKey, droneId) {
+    let attempts = 0;
+    const ciphertext = document.getElementById('ciphertext').value;
+    const knownText = document.getElementById('knownText').value;
+    
+    if (!ciphertext || !knownText) {
+        document.getElementById('results').innerHTML += 
+            "🚫 Need ciphertext and known text! 🚫<br>";
+        return;
+    }
+
+    while (!foundFlag && attempts < KEY_STEP) {
+        const testKey = (baseKey + attempts) % MAX_KEYS;
+        const cipherblob = hexToCyberBytes(ciphertext);
+        
+        if (cipherblob.length === 0) {
+            document.getElementById('results').innerHTML += 
+                "🤮 Invalid ciphertext! Use hex like 'deadbeef'<br>";
+            return;
         }
 
-        function renderTasks() {
-            tasksContainer.innerHTML = '';
-            const circumference = 2 * Math.PI * 45; // r = 45
+        try {
+            const decrypted = quantumDecrypt(testKey, cipherblob);
+            const plaintext = new TextDecoder('utf-8', {fatal: true})
+                .decode(decrypted)
+                .replace(/[^\x20-\x7E]/g, '');
             
-            tasks.forEach((task, index) => {
-                const progress = calculateProgress(task.creationDate, task.deadline);
-                
-                const taskCard = document.createElement('div');
-                taskCard.className = 'task-card';
-                taskCard.innerHTML = `
-                    <div class="progress-circle">
-                        <svg>
-                            <circle class="bg" cx="50" cy="50" r="45"/>
-                            <circle class="progress" cx="50" cy="50" r="45"/>
-                        </svg>
-                        <div class="progress-text">
-                            <span class="days-left">${progress.daysLeft}</span>
-                            <span class="percentage">${Math.round(progress.percentage)}%</span>
-                        </div>
-                    </div>
-                    <div class="task-content">
-                        <h3>${task.title}</h3>
-                        <p>${task.description}</p>
-                        <span class="importance-label ${task.importance}">${task.importance}</span>
-                    </div>
+            // Update drone status
+            const statusElement = document.getElementById(`drone-${droneId}`);
+            if (statusElement) {
+                statusElement.innerHTML = `
+                    🔑 ${testKey}<br>
+                    📈 ${((attempts/KEY_STEP)*100).toFixed(1)}%<br>
+                    📡 ${plaintext.substring(0, 15)}...
                 `;
-                
-                const progressCircle = taskCard.querySelector('.progress');
-                const dashLength = (circumference * progress.percentage) / 100;
-                progressCircle.style.strokeDasharray = `${dashLength} ${circumference}`;
-                
-                tasksContainer.appendChild(taskCard);
-            });
-        }
+            }
 
-        function saveTasks(tasks) {
-            localStorage.setItem('tasks', JSON.stringify(tasks));
+            if (cyberMatch(plaintext, knownText)) {
+                foundFlag = true;
+                document.getElementById('results').innerHTML += `
+                    🎉 CRACKED KEY: ${testKey}<br>
+                    FULL TEXT: ${plaintext.slice(0, 100)}<br><br>
+                `;
+                return;
+            }
+        } catch {
+            // Ignore decoding errors
         }
+        
+        attempts++;
+        await new Promise(r => setTimeout(r, 0));
+    }
+}
 
-        function loadTasks() {
-            const tasksJSON = localStorage.getItem('tasks');
-            return tasksJSON ? JSON.parse(tasksJSON) : [];
-        }
-    </script>
+// ... keep activateSwarm() same ...
+</script>
 </body>
 </html>
